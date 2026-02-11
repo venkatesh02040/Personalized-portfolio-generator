@@ -2,16 +2,30 @@ import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import generateToken from "../utils/token_util.js";
 
-/*
-  @desc    Register new user
-  @route   POST /api/auth/register
-  @access  Public
-*/
+/* =========================================================
+   HELPER: Safe User Response (Never expose password)
+========================================================= */
+const sanitizeUser = (user) => {
+  return {
+    _id: user._id,
+    username: user.username,
+    phone_number: user.phone_number,
+    portfolio_type: user.portfolio_type || null,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt
+  };
+};
+
+/* =========================================================
+   @desc    Register new user
+   @route   POST /api/auth/register
+   @access  Public
+========================================================= */
 export const registerUser = async (req, res) => {
   try {
     const { username, phone_number, password } = req.body;
 
-    // Basic validation
+    /* ---------- Validation ---------- */
     if (!username || !phone_number || !password) {
       return res.status(400).json({
         success: false,
@@ -19,7 +33,7 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    // Check if user already exists
+    /* ---------- Check Existing ---------- */
     const existingUser = await User.findOne({
       $or: [{ username }, { phone_number }]
     });
@@ -31,45 +45,47 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    /* ---------- Hash Password ---------- */
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
+    /* ---------- Create User ---------- */
     const user = await User.create({
       username,
       phone_number,
       password: hashedPassword
     });
 
-    // Generate JWT
+    /* ---------- Generate Token ---------- */
     const token = generateToken({
       userId: user._id
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "User registered successfully",
-      token
+      token,
+      user: sanitizeUser(user)
     });
+
   } catch (error) {
-    console.error("Register Error:", error.message);
-    res.status(500).json({
+    console.error("Register Error:", error);
+    return res.status(500).json({
       success: false,
       message: "Server error"
     });
   }
 };
 
-/*
-  @desc    Login user
-  @route   POST /api/auth/login
-  @access  Public
-*/
+/* =========================================================
+   @desc    Login user
+   @route   POST /api/auth/login
+   @access  Public
+========================================================= */
 export const loginUser = async (req, res) => {
   try {
     const { username, phone_number, password } = req.body;
 
+    /* ---------- Validation ---------- */
     if ((!username && !phone_number) || !password) {
       return res.status(400).json({
         success: false,
@@ -77,7 +93,7 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    // Find user by username OR phone number
+    /* ---------- Find User ---------- */
     const user = await User.findOne({
       $or: [{ username }, { phone_number }]
     });
@@ -89,7 +105,7 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    // Compare password
+    /* ---------- Compare Password ---------- */
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
@@ -99,19 +115,21 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    // Generate JWT
+    /* ---------- Generate Token ---------- */
     const token = generateToken({
       userId: user._id
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Login successful",
-      token
+      token,
+      user: sanitizeUser(user)
     });
+
   } catch (error) {
-    console.error("Login Error:", error.message);
-    res.status(500).json({
+    console.error("Login Error:", error);
+    return res.status(500).json({
       success: false,
       message: "Server error"
     });
