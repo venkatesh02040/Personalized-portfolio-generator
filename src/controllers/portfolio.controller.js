@@ -193,6 +193,7 @@ export const getMyPortfolio = async (req, res) => {
       data: {
         username: user.username,
         phone_number: user.phone_number,
+        gmail: user.gmail,
         portfolio_type: user.portfolio_type,
         profile_image_url: user.profile_image_url,
         social_links: user.social_links,
