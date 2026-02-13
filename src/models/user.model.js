@@ -8,7 +8,12 @@ const EducationSchema = new mongoose.Schema(
   {
     degree: { type: String, required: true, trim: true },
     institution: { type: String, required: true, trim: true },
-    graduation_year: { type: Number, required: true }
+    graduation_year: {
+      type: Number,
+      required: true,
+      min: 1950,
+      max: new Date().getFullYear() + 5
+    }
   },
   { _id: true }
 );
@@ -32,8 +37,18 @@ const ProjectSchema = new mongoose.Schema(
         message: "At least one technology is required"
       }
     },
-    project_link: { type: String, required: true, trim: true },
-    image_url: { type: String, required: true, trim: true }
+    project_link: {
+      type: String,
+      required: true,
+      trim: true,
+      match: [/^https?:\/\/.+/, "Project link must be a valid URL"]
+    },
+    image_url: {
+      type: String,
+      required: true,
+      trim: true,
+      match: [/^https?:\/\/.+/, "Image must be a valid URL"]
+    }
   },
   { _id: true }
 );
@@ -43,7 +58,16 @@ const ExperienceSchema = new mongoose.Schema(
     role: { type: String, required: true, trim: true },
     company: { type: String, required: true, trim: true },
     start_date: { type: Date, required: true },
-    end_date: { type: Date, required: true },
+    end_date: {
+      type: Date,
+      required: true,
+      validate: {
+        validator: function (v) {
+          return v >= this.start_date;
+        },
+        message: "End date must be after start date"
+      }
+    },
     description: { type: String, required: true, trim: true }
   },
   { _id: true }
@@ -57,7 +81,12 @@ const CertificationSchema = new mongoose.Schema(
     title: { type: String, required: true, trim: true },
     issuer: { type: String, required: true, trim: true },
     issue_date: { type: Date, required: true },
-    certificate_pdf_url: { type: String, required: true, trim: true }
+    certificate_pdf_url: {
+      type: String,
+      required: true,
+      trim: true,
+      match: [/^https?:\/\/.+/, "Certificate must be a valid URL"]
+    }
   },
   { _id: true }
 );
@@ -67,10 +96,30 @@ const CertificationSchema = new mongoose.Schema(
 ========================= */
 const SocialLinksSchema = new mongoose.Schema(
   {
-    github: { type: String, required: true, trim: true },
-    linkedin: { type: String, required: true, trim: true },
-    twitter: { type: String, required: true, trim: true },
-    facebook: { type: String, required: true, trim: true }
+    github: {
+      type: String,
+      required: true,
+      trim: true,
+      match: [/^https?:\/\/.+/, "Invalid GitHub URL"]
+    },
+    linkedin: {
+      type: String,
+      required: true,
+      trim: true,
+      match: [/^https?:\/\/.+/, "Invalid LinkedIn URL"]
+    },
+    twitter: {
+      type: String,
+      required: true,
+      trim: true,
+      match: [/^https?:\/\/.+/, "Invalid Twitter URL"]
+    },
+    facebook: {
+      type: String,
+      required: true,
+      trim: true,
+      match: [/^https?:\/\/.+/, "Invalid Facebook URL"]
+    }
   },
   { _id: false }
 );
@@ -134,9 +183,33 @@ const ExperiencedSchema = new mongoose.Schema(
 const UserSchema = new mongoose.Schema(
   {
     /* ---------- AUTH ---------- */
-    username: { type: String, required: true, unique: true, trim: true },
-    phone_number: { type: String, required: true, unique: true, trim: true },
-    password: { type: String, required: true },
+    username: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true
+    },
+
+    phone_number: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true
+    },
+
+    gmail: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      match: [/^\S+@\S+\.\S+$/, "Please enter a valid email"]
+    },
+
+    password: {
+      type: String,
+      required: true
+    },
 
     /* ---------- PORTFOLIO META ---------- */
     portfolio_type: {
@@ -147,49 +220,45 @@ const UserSchema = new mongoose.Schema(
 
     profile_image_url: {
       type: String,
-      required: function () {
-        return !!this.portfolio_type;
-      },
-      trim: true
+      trim: true,
+      match: [/^https?:\/\/.+/, "Profile image must be a valid URL"]
     },
 
     social_links: {
-      type: SocialLinksSchema,
-      required: function () {
-        return !!this.portfolio_type;
-      }
+      type: SocialLinksSchema
     },
 
     certifications: {
       type: [CertificationSchema],
-      default: [],
-      required: function () {
-        return !!this.portfolio_type;
-      },
-      validate: {
-        validator: function (v) {
-          return !this.portfolio_type || (Array.isArray(v) && v.length > 0);
-        },
-        message: "At least one certification is required"
-      }
+      default: []
     },
 
     /* ---------- PORTFOLIOS ---------- */
     fresher: {
-      type: FresherSchema,
-      required: function () {
-        return this.portfolio_type === "fresher";
-      }
+      type: FresherSchema
     },
 
     experienced: {
-      type: ExperiencedSchema,
-      required: function () {
-        return this.portfolio_type === "experienced";
-      }
+      type: ExperiencedSchema
     }
   },
   { timestamps: true }
 );
+
+/* =========================
+   SAFETY VALIDATION
+========================= */
+
+UserSchema.pre("validate", function (next) {
+  if (this.portfolio_type === "fresher" && this.experienced) {
+    return next(new Error("Experienced data not allowed for fresher"));
+  }
+
+  if (this.portfolio_type === "experienced" && this.fresher) {
+    return next(new Error("Fresher data not allowed for experienced"));
+  }
+
+  next();
+});
 
 export default mongoose.model("User", UserSchema);

@@ -9,6 +9,7 @@ const sanitizeUser = (user) => {
   return {
     _id: user._id,
     username: user.username,
+    gmail: user.gmail,
     phone_number: user.phone_number,
     portfolio_type: user.portfolio_type || null,
     createdAt: user.createdAt,
@@ -23,35 +24,40 @@ const sanitizeUser = (user) => {
 ========================================================= */
 export const registerUser = async (req, res) => {
   try {
-    const { username, phone_number, password } = req.body;
+    const { username, phone_number, gmail, password } = req.body;
 
     /* ---------- Validation ---------- */
-    if (!username || !phone_number || !password) {
+    if (!username || !phone_number || !gmail || !password) {
       return res.status(400).json({
         success: false,
         message: "All fields are required"
       });
     }
 
-    /* ---------- Check Existing ---------- */
+    /* ---------- Check Existing User ---------- */
     const existingUser = await User.findOne({
-      $or: [{ username }, { phone_number }]
+      $or: [
+        { username },
+        { phone_number },
+        { gmail }
+      ]
     });
 
     if (existingUser) {
       return res.status(409).json({
         success: false,
-        message: "Username or phone number already exists"
+        message: "Username, phone number or gmail already exists"
       });
     }
 
     /* ---------- Hash Password ---------- */
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     /* ---------- Create User ---------- */
     const user = await User.create({
       username,
       phone_number,
+      gmail: gmail.toLowerCase(),
       password: hashedPassword
     });
 
@@ -83,19 +89,23 @@ export const registerUser = async (req, res) => {
 ========================================================= */
 export const loginUser = async (req, res) => {
   try {
-    const { username, phone_number, password } = req.body;
+    const { username, phone_number, gmail, password } = req.body;
 
     /* ---------- Validation ---------- */
-    if ((!username && !phone_number) || !password) {
+    if ((!username && !phone_number && !gmail) || !password) {
       return res.status(400).json({
         success: false,
-        message: "Username or phone number and password are required"
+        message: "Username, phone number or gmail and password are required"
       });
     }
 
     /* ---------- Find User ---------- */
     const user = await User.findOne({
-      $or: [{ username }, { phone_number }]
+      $or: [
+        username ? { username } : null,
+        phone_number ? { phone_number } : null,
+        gmail ? { gmail: gmail.toLowerCase() } : null
+      ].filter(Boolean)
     });
 
     if (!user) {
