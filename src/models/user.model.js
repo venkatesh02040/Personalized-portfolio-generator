@@ -249,16 +249,15 @@ const UserSchema = new mongoose.Schema(
    SAFETY VALIDATION
 ========================= */
 
-UserSchema.pre("validate", function (next) {
+UserSchema.pre("validate", function () {
   if (this.portfolio_type === "fresher" && this.experienced) {
-    return next(new Error("Experienced data not allowed for fresher"));
+    throw new Error("Experienced data not allowed for fresher");
   }
 
   if (this.portfolio_type === "experienced" && this.fresher) {
-    return next(new Error("Fresher data not allowed for experienced"));
+    throw new Error("Fresher data not allowed for experienced");
   }
-
-  next();
 });
+
 
 export default mongoose.model("User", UserSchema);
