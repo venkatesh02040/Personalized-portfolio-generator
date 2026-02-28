@@ -1,15 +1,15 @@
 import User from "../models/user.model.js";
 
 /*
-  @desc    Get public portfolio by username
-  @route   GET /api/public/:username
+  @desc    Get public portfolio by slug
+  @route   GET /api/public/:slug
   @access  Public
 */
 export const getPublicPortfolio = async (req, res) => {
   try {
-    const { username } = req.params;
+    const { username: slug } = req.params; // ✅ param name kept same, treated as slug
 
-    const user = await User.findOne({ username }).select(
+    const user = await User.findOne({ slug }).select( // ✅ query by slug instead of username
       "-password -phone_number -__v -createdAt -updatedAt"
     );
 

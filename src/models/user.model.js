@@ -190,6 +190,14 @@ const UserSchema = new mongoose.Schema(
       trim: true
     },
 
+    // ✅ ADDED: URL-safe slug generated from username
+    slug: {
+      type: String,
+      unique: true,
+      sparse: true,  // allows existing users to have null slug until backfilled
+      trim: true
+    },
+
     phone_number: {
       type: String,
       required: true,

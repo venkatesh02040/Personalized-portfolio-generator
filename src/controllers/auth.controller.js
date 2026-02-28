@@ -1,6 +1,7 @@
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import generateToken from "../utils/token_util.js";
+import { generateSlug } from "../utils/slug_util.js"; // ✅ ADDED
 
 /* =========================================================
    HELPER: Safe User Response (Never expose password)
@@ -9,6 +10,7 @@ const sanitizeUser = (user) => {
   return {
     _id: user._id,
     username: user.username,
+    slug: user.slug,             // ✅ ADDED: include slug in response
     gmail: user.gmail,
     phone_number: user.phone_number,
     portfolio_type: user.portfolio_type || null,
@@ -53,9 +55,13 @@ export const registerUser = async (req, res) => {
     /* ---------- Hash Password ---------- */
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    /* ---------- Generate Slug ---------- */ // ✅ ADDED
+    const slug = generateSlug(username);
+
     /* ---------- Create User ---------- */
     const user = await User.create({
       username,
+      slug,               // ✅ ADDED
       phone_number,
       gmail: gmail.toLowerCase(),
       password: hashedPassword
