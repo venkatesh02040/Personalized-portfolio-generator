@@ -7,7 +7,7 @@ import generateSlug from "../utils/slug_util.js"; // ✅ ADDED
 const validateArray = (arr, name) => {
   if (!Array.isArray(arr) || arr.length === 0) {
     return `${name} must have at least one item`;
-  }
+  } 
   return null;
 };
 
