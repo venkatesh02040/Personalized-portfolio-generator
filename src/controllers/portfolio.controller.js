@@ -9,7 +9,7 @@ const validateArray = (arr, name) => {
     return `${name} must have at least one item`;
   } 
   return null;
-};
+}; 
 
 const validateSocialLinks = (social_links) => {
   const required = ["github", "linkedin", "twitter", "facebook"];
