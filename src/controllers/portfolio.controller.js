@@ -1,4 +1,5 @@
 import User from "../models/user.model.js";
+import { generateSlug } from "../utils/slug_util.js"; // ✅ ADDED
 
 /* =========================
    HELPER VALIDATION FUNCTIONS
@@ -82,7 +83,6 @@ export const createOrUpdatePortfolio = async (req, res) => {
   try {
     const userId = req.user.userId;
     
-    // ─── Add username and phone_number to destructuring ───
     const { 
       portfolio_type, 
       profile_image_url, 
@@ -90,8 +90,8 @@ export const createOrUpdatePortfolio = async (req, res) => {
       certifications, 
       fresher, 
       experienced,
-      username,           // ← NEW
-      phone_number        // ← NEW
+      username,
+      phone_number
     } = req.body;
 
     // ---------- BASIC VALIDATIONS ----------
@@ -103,12 +103,10 @@ export const createOrUpdatePortfolio = async (req, res) => {
       return res.status(400).json({ success: false, message: "Profile image is required" });
     }
 
-    // ─── Optional: validate username & phone if provided ───
     if (username !== undefined) {
       if (typeof username !== 'string' || username.trim().length < 3) {
         return res.status(400).json({ success: false, message: "Username must be at least 3 characters" });
       }
-      // Check uniqueness (important!)
       const existingUser = await User.findOne({ username: username.trim(), _id: { $ne: userId } });
       if (existingUser) {
         return res.status(400).json({ success: false, message: "Username is already taken" });
@@ -119,21 +117,15 @@ export const createOrUpdatePortfolio = async (req, res) => {
       if (typeof phone_number !== 'string' || !/^\+?[1-9]\d{9,14}$/.test(phone_number.trim())) {
         return res.status(400).json({ success: false, message: "Invalid phone number format" });
       }
-      // Check uniqueness for phone too
       const existingPhone = await User.findOne({ phone_number: phone_number.trim(), _id: { $ne: userId } });
       if (existingPhone) {
         return res.status(400).json({ success: false, message: "Phone number is already in use" });
       }
     }
 
-    // ... your existing validations for social_links, certifications, fresher/experienced ...
-
     // ---------- FETCH USER ----------
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
-
-    // ---------- PORTFOLIO SPECIFIC VALIDATION ----------
-    // (your existing code remains unchanged)
 
     // ---------- SAVE DATA ----------
     user.set({
@@ -143,27 +135,27 @@ export const createOrUpdatePortfolio = async (req, res) => {
       certifications,
       fresher: portfolio_type === "fresher" ? fresher : null,
       experienced: portfolio_type === "experienced" ? experienced : null,
-      
-      // ─── NEW ─── Only update if provided in request
-      ...(username !== undefined && { username: username.trim() }),
+      ...(username !== undefined && { 
+        username: username.trim(),
+        slug: generateSlug(username.trim()) // ✅ regenerate slug if username changes
+      }),
       ...(phone_number !== undefined && { phone_number: phone_number.trim() }),
     });
 
     await user.save();
 
-    // Optional but very useful: return the updated user (without password)
     const updatedUser = await User.findById(userId).select("-password");
 
     res.status(200).json({ 
       success: true, 
       message: "Portfolio and profile updated successfully",
-      user: updatedUser   // ← frontend can use this to update localStorage
+      user: updatedUser
     });
 
   } catch (error) {
     console.error("Portfolio Error:", error.message);
     
-    if (error.code === 11000) { // duplicate key error (username or phone)
+    if (error.code === 11000) {
       return res.status(400).json({ 
         success: false, 
         message: "Username or phone number is already taken" 
@@ -181,10 +173,7 @@ export const getMyPortfolio = async (req, res) => {
   try {
     const userId = req.user.userId;
     
-    // Include username and phone_number in the response
-    const user = await User.findById(userId).select(
-      "-password -__v"   // keep password hidden
-    );
+    const user = await User.findById(userId).select("-password -__v");
 
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
@@ -192,6 +181,7 @@ export const getMyPortfolio = async (req, res) => {
       success: true,
       data: {
         username: user.username,
+        slug: user.slug,             // ✅ ADDED
         phone_number: user.phone_number,
         gmail: user.gmail,
         portfolio_type: user.portfolio_type,
