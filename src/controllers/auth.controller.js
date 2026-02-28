@@ -1,7 +1,7 @@
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import generateToken from "../utils/token_util.js";
-import { generateSlug } from "../utils/slug_util.js"; // ✅ ADDED
+import generateSlug from "../utils/slug_util.js"; // ✅ ADDED
 
 /* =========================================================
    HELPER: Safe User Response (Never expose password)
