@@ -1,5 +1,5 @@
 import User from "../models/user.model.js";
-import { generateSlug } from "../utils/slug_util.js"; // ✅ ADDED
+import generateSlug from "../utils/slug_util.js"; // ✅ ADDED
 
 /* =========================
    HELPER VALIDATION FUNCTIONS
